@@ -52,26 +52,26 @@ public:
 
     /** @brief Destructor inherited from the Grabber interface. It never throws. */
     virtual ~EnsensoGrabber () throw ();
-    
-    /** @brief With this command you can calibrate the position of the camera with respect to a robot. 
-    * The calibration routine currently supports two types of setups: either your camera is fixed with 
-    * respect to the robot origin, or your camera mounted on the robot hand and is moving with the robot.
-    * @param[in] robot_poses A list of robot poses, 1 for each pattern acquired (in the same order)
-    * @param[in] camera_seed Initial guess of the camera pose. The pose must be given relative to the 
-    * robot hand (for a moving camera setup), or relative to the robot origin (for the fixed camera setup).
-    * @param[in] pattern_seed Initial guess of the pattern pose. This pose must be given relative to the 
-    * robot hand (for a fixed camera setup), or relative to the robot origin (for the moving camera setup).
-    * @param[in] setup Moving or Fixed, please refer to the Ensenso documentation
-    * @param[out] estimated_camera_pose The Transformation between this camera's left eye coordinates and 
-    * the next linked system.
-    * @param[out] estimated_pattern_pose The estimated pattern pose. This pose is either relative to the 
-    * robot hand (for a fixed camera setup), or relative to the robot origin (for the moving camera setup).
-    * @param[out] iterations Indicates the number of optimization iterations performed on the final solution 
-    * until it had converged.
-    * @param[out] reprojection_error The reprojection error per pattern point over all collected patterns of 
-    * the final solution.
-    * @return True if successful, false otherwise
-    * @warning This can take up to 120 seconds */
+
+    /** @brief With this command you can calibrate the position of the camera with respect to a robot.
+     * The calibration routine currently supports two types of setups: either your camera is fixed with
+     * respect to the robot origin, or your camera mounted on the robot hand and is moving with the robot.
+     * @param[in] robot_poses A list of robot poses, 1 for each pattern acquired (in the same order)
+     * @param[in] camera_seed Initial guess of the camera pose. The pose must be given relative to the
+     * robot hand (for a moving camera setup), or relative to the robot origin (for the fixed camera setup).
+     * @param[in] pattern_seed Initial guess of the pattern pose. This pose must be given relative to the
+     * robot hand (for a fixed camera setup), or relative to the robot origin (for the moving camera setup).
+     * @param[in] setup Moving or Fixed, please refer to the Ensenso documentation
+     * @param[out] estimated_camera_pose The Transformation between this camera's left eye coordinates and
+     * the next linked system.
+     * @param[out] estimated_pattern_pose The estimated pattern pose. This pose is either relative to the
+     * robot hand (for a fixed camera setup), or relative to the robot origin (for the moving camera setup).
+     * @param[out] iterations Indicates the number of optimization iterations performed on the final solution
+     * until it had converged.
+     * @param[out] reprojection_error The reprojection error per pattern point over all collected patterns of
+     * the final solution.
+     * @return True if successful, false otherwise
+     * @warning This can take up to 120 seconds */
     bool calibrateHandEye ( const std::vector<Eigen::Affine3d, Eigen::aligned_allocator<Eigen::Affine3d> > &robot_poses,
                             const Eigen::Affine3d &camera_seed,
                             const Eigen::Affine3d &pattern_seed,
@@ -333,20 +333,74 @@ public:
 
     /** @brief Start the point cloud and or image acquisition
      * @note Opens device "0" if no device is open */
-
-    bool setDepthChangeCost(const int changecost) const;
-    bool setDepthStepCost(const int stepcost) const;
-    bool setShadowingThreshold(const int shadowingthreshold) const;
-    bool setUniquenessRatio(const int ratio) const;
-    bool setMedianFilterRadius(const int radius) const;
-    bool setSpeckleComponentThreshold(const int threshold) const;
-    bool setSpeckleRegionSize(const int threshold) const;
-    bool setFillBorderSpread(const int maximumspread) const;
-    bool setFillRegionSize(const int regionsize) const;
     void start ();
 
     /** @brief Stop the data acquisition */
     void stop ();
+
+    /** @brief The penalty for changes of +/- 1 disparity along an optimization path.
+       Setting a larger value for DepthChangeCost will result in smoother surfaces, but some details might get lost when setting this value too large.
+     * @param[in] A positive integer specifying the cost of disparity changes in the disparity map.
+     * @note his value must be smaller than DepthStepCost. Default Value 5
+     */
+    bool setDepthChangeCost(const int changecost) const;
+
+    /** @brief The penalty for steps (changes of more than one disparity) along an optimization path.
+       Setting a larger value for DepthStepCost will yield better detection of planar surfaces in low contrast areas, but too large values will lead to a loss of geometry details and precise object boundaries.
+     * @param[in] A positive integer, strictly larger than DepthChangeCost, specifying the cost of disparity steps (discontinuities) in the disparity map.
+     * @note This value must be larger than DepthChangeCost. Default Value 30
+     * @return True if successful, false otherwise
+     */
+    bool setDepthStepCost(const int stepcost) const;
+
+    /** @brief The disparity map is checked for occluded pixels. This is usually called 'left-right consistency check'. A pixel is only accepted if it is a mutually best match with the assigned right image pixel. Due to subpixel interpolation and half-occluded pixels, it is reasonable to allow small deviations from 'exact mutual' matches. This threshold sets the allowed range of mismatch in pixels.
+     * @param[in] An integer specifying the threshold in disparities by which a pixel might be occluded by another pixel to still be accepted as valid. Negative values disable the occlusion detection and will leave wrongly associated regions in occluded image areas.
+     * @note Setting a negative value (e.g. -1) for this parameter will disable filtering of shadowed areas. This will leave arbitrary depth values in shadowed areas. Default Value 1
+     * @return True if successful, false otherwise
+     */
+    bool setShadowingThreshold(const int shadowingthreshold) const;
+
+    /** @brief Filters the pixels depending on the uniqueness of the found correspondence. The value indicates the percentage, by which the cost of the next best correspondence must be larger (compared to the best correspondence), such that the pixel is accepted.
+     * @param[in] An integer specifying the uniqueness margin in percent.
+     * @note  Setting this parameter to 0 disables the uniqueness filter.
+     * @return True if successful, false otherwise
+     */
+    bool setUniquenessRatio(const int ratio) const;
+
+    /** @brief Specifies the size of the median filter as radius in pixels, excluding the center pixel. The filter is applied to the disparity map. Median filtering will reduce noise inside surfaces while maintaining sharp edges, but object corners will be rounded.
+     * @param[in] An integer specifying half the median filter window size in pixels, excluding the center pixel. Allowed values are 0 to 2.
+     * @note Setting the filter radius to 0 will disable median filtering.
+     * @return True if successful, false otherwise
+     */
+    bool setMedianFilterRadius(const int radius) const;
+
+    /** @brief Defines how the image is divided into regions for speckle filtering. Whenever two neighboring pixel disparities differ by more than ComponentThreshold disparities, the two pixels are considered as belonging to separate regions. Consequently, each resulting region will not have discontinuities larger or equal to ComponentThreshold in it's disparity map area.
+     * @param[in] An integer specifying the disparity step size, where surfaces should be cut into separate speckle regions.
+     * @note  The smaller this threshold is set, the smaller the resulting disparity regions will be. Thus setting a smaller ComponentThreshold will result in more regions being filtered out, because some regions fall apart and their sizes drop below RegionSize.
+     * @return True if successful, false otherwise
+     */
+    bool setSpeckleComponentThreshold(const int threshold) const;
+
+    /** @brief The size in pixels of a disparity map region below which the region will be removed from the disparity map. The computation of the regions is controlled by ComponentThreshold.
+     * @param[in] An integer specifying the size in pixels below which a region will be removed from the disparity map.
+     * @note  Setting this parameter to 0 disables the speckle filter.
+     * @return True if successful, false otherwise
+     */
+    bool setSpeckleRegionSize(const int threshold) const;
+
+    /** @brief Defines which missing regions will be filled by setting a threshold on the maximum spread of the disparities on the region boundary. Setting this value reasonably small will ensure that only missing patches inside planar faces will be filled whereas gaps at depth discontinuities are kept unfilled.
+     * @param[in] An integer specifying the maximum spread of the disparities at the fill region border.
+     * @return True if successful, false otherwise
+     */
+    bool setFillBorderSpread(const int maximumspread) const;
+
+    /** @brief Defines an upper limit on the region size in pixels, up to which a region is accepted for filling. The region must also satisfy the BorderSpread condition to be filled.
+     * @param[in] An integer specifying region size in pixels, up to which a missing region is being filled.
+     * @note Setting this parameter to 0 disables the hole filling filter.
+     * @return True if successful, false otherwise
+     */
+    bool setFillRegionSize(const int regionsize) const;
+
 
 protected:
     /** @brief Grabber thread */
