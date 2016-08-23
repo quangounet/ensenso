@@ -1,8 +1,10 @@
 # ensenso
 
-ROS package developed by the [Control Robotics Intelligence Group](http://www.ntu.edu.sg/home/cuong/) from the [Nanyang Technological University, Singapore](http://www.ntu.edu.sg). This package allows to receive in ROS the rigid bodies streamed by Motive 1.7.
+ROS package developed by the [Control Robotics Intelligence Group](http://www.ntu.edu.sg/home/cuong/) from the [Nanyang Technological University, Singapore](http://www.ntu.edu.sg). This package acts as a ROS driver for the ensenso 3D cameras.
 
 The **master** branch is compatible with both ROS **Hydro** and **Indigo**.
+
+**Update (13-Jun-2016)**: On going development continues in the **kinetic-devel** branch.
 
 ### Our setup
   * Ensenso camera N35 (Ethernet version) (Tested with N35-802-16-BL and N35-804-16-BL models)
