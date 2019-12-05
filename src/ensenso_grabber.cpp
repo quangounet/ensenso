@@ -1,4 +1,5 @@
 #include "ensenso/ensenso_grabber.h"
+#include <boost/format.hpp>
 #include <boost/make_shared.hpp>
 
 void ensensoExceptionHandling (const NxLibException &ex,
